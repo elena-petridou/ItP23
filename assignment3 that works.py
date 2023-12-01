@@ -18,8 +18,6 @@ TO DO:
 
 
 
-
-
 class NullDict(defaultdict):
 	# Class that initialises a default empty dictionary to which we can add the counts of each word without throwing an IndexError
 	# In this case, we pass the arguments of the built-in dict unchanged via our Class
@@ -283,11 +281,17 @@ def main(model_name, corpus_filename, n_sentences, max_sentence_len):
 
 def check_filename(filename):
 	forbidden_chars = ["/", "\\", "?", "%", "*", ":", "|", "<", ">", ".", ",", ";", "="]
+	forbidden_chars_in_filename = []
 	type_filename = str(type(filename))
 	match type_filename:
 		case "<class 'str'>":
-			for i in forbidden_chars:
-				if i in filename:
+			for i in filename:
+				if i in forbidden_chars:
+					forbidden_chars_in_filename.append(i)
+					forbidden_chars_in_filename = ", ".join(forbidden_chars_in_filename)
+					filename_error_message = "Your requested filename contained the special character " +"'"+ forbidden_chars_in_filename + "'"+ ". Please specify a filename without special characters."
+					filename_error_field = tk.Label(instructions_frame, text = filename_error_message, fg = 'red')
+					filename_error_field.pack()
 					return False
 				else:
 					return True
@@ -301,7 +305,7 @@ def check_numerical_inputs(input, field):
 		case True:
 			number = int(numeric)
 		case False:
-			error_message = "Your requested number of " + field + "is not recognised or unsupported. Please specify a number from 1 and up"
+			error_message = "Your requested number of " + field + " is not recognised or unsupported. Please specify a number from 1 and up"
 			input_nondigit = tk.Label(instructions_frame, text = error_message, fg = 'red')
 			input_nondigit.pack()
 	return numeric
@@ -313,18 +317,17 @@ def collect_inputs_from_gui():
 	go_ahead = False
 	# If the user closes the window without inputting anything, end the program
 	try:
-		print("tried")
 		model_name = model_entry.get()
 		max_sentence_len = number_of_words.get()
 		n_sentences = number_of_sentences.get()
 		filename = filename_entry.get()
-		print("tried")
 	except:
-		print("exception occurred")
 		sys.exit()
 	go_ahead = check_filename(filename) and check_numerical_inputs(n_sentences, "sentences") and check_numerical_inputs(max_sentence_len, "words")
 	print(go_ahead)
 	if go_ahead == True:
+		n_sentences = int(n_sentences)
+		max_sentence_len = int(max_sentence_len)
 		main(model_name, "text.txt", n_sentences, max_sentence_len)
 
 	
