@@ -1,30 +1,49 @@
 from collections import defaultdict
 from pathlib import Path
-import autograder
-import unittest
 import numpy as np
 import tkinter as tk
 from tkinter import simpledialog
 import sys
 from tkinter import ttk
+# Import the custom_parser as a callable function to allow the user to pick which corpus they would prefer to train their model on
 from custom_parser import produce_corpus
 
 
 '''
 TO DO: 
 - Add comments to whole doc
-- Check that new coding concepts were used
-- Write function that writes the generated sentences to a file
 '''
 
 
 
 class NullDict(defaultdict):
-	# Class that initialises a default empty dictionary to which we can add the counts of each word without throwing an IndexError
-	# In this case, we pass the arguments of the built-in dict unchanged via our Class
+	'''Class that initialises a default empty dictionary to which we can add the counts of each word without throwing an IndexError
+	In this case, we pass the arguments of the built-in dict unchanged via our Class'''
 	def __init__(self, *args, **kwargs):
 		super(NullDict, self).__init__(*args, **kwargs)
 		self.default_factory = lambda:0
+
+# This function is not used, in favour of the class NullDict()
+def create_defaultdict(type):
+    """
+    This is an optional function that returns a function that returns a defaultdict with as default type.
+
+    EXPLANTION (see grading):
+    default_dict is a type of dictionary from the collections module. It does not raise a KeyError, because it initialises the dictionary with a default value (via the parameter default_factory)
+    which is returned if/when the user tries to access a key which is not present. As such, we can pass a default_factory argument into the default_dict function to ensure that our dictionary 
+    never returns a KeyError.
+
+    Since default_factory is a callable function, we cannot simply pass an object to defaultdict() as an argument for its default value, we would need to pass in a function which returns our desired
+    default value.  A lambda function is a way of avoiding the creation of an explicit, named function when we only need it as an argument to be passed into another function. 
+    In our case here: default_factory is a parameter for the default_dict() function, but since this is its only use in the program, there's no point making a named function of it. As such, we use lambda: 0, to pass
+    in the default value of the dictionary (0) implicitly. 
+    """
+    def return_defaultdict():
+        defaultdict(lambda: 0)
+
+    return return_defaultdict
+
+
 
 def parse_text_file(file):
 	"""
@@ -32,11 +51,15 @@ def parse_text_file(file):
 	where a sentence consists of list of words and should start
 	with a special word "\<s>" and end with "</s>".
 	"""
+	
 	txt_file = open(file,"r")
 	text = txt_file.read()
 	sentence_list = []
 	word = []
 	sentence = ["<s>"]
+
+	'''Reading the text file character by character, and creating words by appending non-space characters; once a space is encountered, append the word to the sentence. 
+	Once a newline is encountered, append the sentence to the list of sentences'''
 	for char in text:
 		if char != " ":
 			word.append(char)
@@ -53,16 +76,11 @@ def parse_text_file(file):
 	return sentence_list
 
 
-
-
-def check_for_digit(text):
-	for char in text: 
-		if char.isdigit() == True:
-			return char
-	return False
-
-
 def index_positions(name):
+	'''
+	HELPER FUNCTION FOR initialise_dicts()
+    Determines how many nested dictionaries should be initialised for the counts
+	'''
 	counts = NullDict()
 	counts["unigram"] = 1
 	counts["bigram"] = 2
@@ -70,8 +88,13 @@ def index_positions(name):
 	no_of_grams = counts[name]
 	return no_of_grams, counts
 
-	
+
 def initialise_dicts(name):
+	'''
+	HELPER FUNCTION for make_counts()
+	Initialise "counts" nested dictionary, which contains only the counts of the models required. E.g.: if making unigrams, 
+	will not initialise bigrams and trigrams
+	'''
 	no_of_grams, counts = index_positions(name)
 	inverted_counts = {value:key for key, value in counts.items()}
 	for i in range(1, no_of_grams+1):
@@ -81,18 +104,26 @@ def initialise_dicts(name):
 
 
 def make_ngrams(no_of_grams, sentence, index_position, inverted_counts, counts):
+	'''
+	HELPER FUNCTION for make_counts()
+	Using this function, we abstract away how many words are in an n-gram, meaning that all n-grams can use the same code to be created
+	'''
 	for num in range(no_of_grams):
 		positions_to_follow = num + 1
 		ngram = []
 		for i in range(positions_to_follow):
+			'''i is the index position of the current word in the sentence, and according to the n-gram we are assembling, 
+			we grab the current position and a corresponding number of words following it (if there are enough words left in 
+			the sentence to make this possible)'''
 			if index_position + i < len(sentence):
 				ngram.append(sentence[index_position + i])
+		
 		if len(ngram) == positions_to_follow:
-			# ngram = ', '.join(ngram)
 			ngram = tuple(ngram)
 			model_name = inverted_counts[num+1]
 			counts[model_name][ngram] += 1
-	# To abstract the calculation of probabilities when creating the n-gram probability dictionary 
+	# To abstract the calculation of probabilities when creating the n-gram probability dictionary, any model greater than a unigram will be assigned a previous_model, unigram has False
+	previous_model = False
 	try: 
 		previous_model = inverted_counts[no_of_grams-1]
 	except:
@@ -102,6 +133,13 @@ def make_ngrams(no_of_grams, sentence, index_position, inverted_counts, counts):
 
 
 def make_counts(name, sentences):
+	'''
+	Count the total words in the corpus, as well as the occurence of every:
+	- word if unigram
+	- bigram and word if bigram
+	- trigram and bigram if trigram 
+	We use the counts of the previous model in the probability calculation for the current n-gram (see make_ngram_model)
+	'''
 	total_words = 0
 	counts, no_of_grams, inverted_counts = initialise_dicts(name)
 	for sentence in sentences:
@@ -111,12 +149,18 @@ def make_counts(name, sentences):
 			if sentence[index_position]!= "<s>":
 				total_words += 1
 			index_position += 1
-	return counts, total_words, previous_model, no_of_grams, inverted_counts
-
-
+	return counts, total_words, previous_model, no_of_grams
 
 
 def fetch_start_term(counts):
+	'''
+	HELPER FUNCTION FOR make_ngram_model()
+	While not the most elegant solution, I could not find another way to start my sentences in the trigram model, 
+	and I was already many weeks' work into this way of making the models so it seemed too late to turn back.
+
+	This function returns the probabilities of the first word in a sentence as calculated in the unigram model, in order to
+	add it to the trigram model.
+	'''
 	start_term = NullDict()
 	for key, count in counts["bigram"].items():
 		first_word = key[0]
@@ -125,36 +169,30 @@ def fetch_start_term(counts):
 			start_term[key[1]] = count/denom
 	return start_term    
 
-
-
-
-
-
 def make_ngram_model(sentences, name):
 	"""
-	To make a ngram model we need to translate all the sentences into
-	a prediction model that tells us the chance for a random word.
+	I know this is not the suggested way of achieving this, but once I realised that, I was already working on the project for more than a few days, 
+	so I stuck with this solution -- the reason for originally attempting it this way was that I was under the impression that only having to loop through
+	the corpus once for the counts, and then through the counts once for the probabilities at the beginning VS traversing the corpus anew for every word in the history/sentence
+	would be faster. I don't know if my thinking on this is correct.
 
-	Each model will be stored in a dictionary that looks as follows.
-	The keys of this dictionary is the history which are the previous word(s) in the sentence.
-	The values are a dictionary on their own with as keys all the possible words and
-	as values the probability of that word following the history (previous words).
+	This function: 
+	- Makes the counts of the current n-gram, and the one before it, and counts the total words in the corpus
+	- Appends the start term for the trigram if working on a trigram
+	- Calculates the probability of a given ngram by:
+		CASE: BIGRAM/TRIGRAM
+		- Taking the count of the whole ngram (for ngram, count in counts[name].items:) and setting it as the numerator
+		- Taking the count of the first n-1 terms of the ngram (counts[previous_model][current_key]) and setting it as the denominator
+		- The resulting fraction (here, float) is stored in the nested null-dictionary ngrams, using the first n-1 terms as the key, and a null dictionary as a value
+		- This null_dictionary uses the last term in the ngram as a key, and the probability of the ngram as a value 
+		CASE UNIGRAM:
+		- Taking the count of the word as the numerator
+		- Taking the total words as the denominator
+		- Storing the resulting fraction (here, float) in the ngrams null-dictionary, with the word as the key and the probability as the value
+	- Returns the n-grams and the n of the n-gram
 
-	For more details, see the exercise description.
-
-	Tip 1: Before making the dictionary with all probabilities, make a similar dictionary with the counts.
-	Tip 2: To make the code cleaner, you can use a `defaultdict` instead of a `dict`.
-		   This adds the benefit that if a key does not exist the value will be a default value
-		   and not throw the error KeyError. To make a defaultdict of defaultdict with int values.
-		   You can use defaultdict(create_defaultdict(int)), where create_defaultdict is a function that
-		   returns a defaultdict, This defaultdict has as default the input of the function `create_defaultdict`.
-	Tip 3: If you want to loop over the keys of a dict you can type `for key in dict:`,
-		   If you want to loop over the values add .values() thus `for value in dict.values:`
-		   and for both you can use `for key, value in dict.items():`
 	"""
-	# Make a dictionary with counts of the words, bigrams, and/or trigrams respectively (the last three if applicable based on the specified model). 
-	# Count the total words in the corpus at the same time
-	counts, total_words, previous_model, no_of_grams, inverted_counts = make_counts(name, sentences)
+	counts, total_words, previous_model, no_of_grams = make_counts(name, sentences)
 	ngrams = NullDict()
 	if name == "trigram":
 		start_terms = fetch_start_term(counts)
@@ -171,29 +209,20 @@ def make_ngram_model(sentences, name):
 			if no_of_grams > 1:
 				ngrams[current_key] = NullDict()
 	# Here, ngram is the whole ngram, and count = P(whole ngram | first n-1 words in the ngram), while denom = P(first n-1 words in the ngram), and we use these
-	# later to calculate the conditional probability of the ngram
+	# to calculate the conditional probability of the ngram
 		denom = counts[previous_model][current_key] if previous_model != False else total_words
-		if str(type(ngrams[current_key])) == "<class '__main__.NullDict'>":
+		if type(ngrams[current_key]) != int:
 			ngrams[current_key][term] = count/denom
 		else:
 			ngrams[current_key] = count/denom
 	return ngrams, no_of_grams
 
 
-
-
-
-
 def set_history(history, new_word, name, no_of_grams):
 	"""
-	This function should return a new history depending on the model that is used and the new_word.
-	name could be three values: unigram, bigram or trigram.
-	This function should be the only place where the three models have different code.
-	See grading scheme *dry code*.
-
-	If history is None, initialize the history correctly depending on the model.
-
-	This function is optional to use. However, highly recommended to keep your code dry.
+	HELPER FUNCTION FOR predict_sentence()
+	When generating sentences, we want to keep the history of the last n terms depending on the ngram we are using. When using a unigram, we 
+	do not wish to store a history, since any word could follow any word.
 	"""
 	if name == "unigram":
 		history = [] 
@@ -208,6 +237,11 @@ def set_history(history, new_word, name, no_of_grams):
 
 
 def set_probabilities(model, history):
+	'''
+	HELPER FUNCTION FOR predict_sentence()
+	Glean the model according to the length of the history. If bigram or trigram, need to go inside the nested null_dicts to 
+	acquire the choice_of_words and probabilities vectors. Otherwise, go into the simple null_dict
+	'''
 	if len(history) > 0:
 		history = tuple(history)
 		choice_of_words = [word for word in model[history].keys()]
@@ -221,26 +255,7 @@ def set_probabilities(model, history):
 
 def predict_sentence(model, name, n_sentences, max_sentence_len, no_of_grams):
 	"""
-	Here, you will implement a sentence predictor.
-
-	To generate a sentence using a n-gram model, follow these guidelines:
-
-	1. Initialize the history by appending an appropriate number of start tokens `"<s>"`,
-	   see the model descriptions above. For the unigram model,
-	   you do not add the start token `"<s>"`. The history always begins with `"<any>"`.
-	2. Now, you can use the history in the model-dictionary to get the word-dictionary.
-	   The keys of this word-dictionary are the possible next words and their values are
-	   the probability of that word. Hint: Just using `np.random.choice(word-dictionary.keys())`
-	   will not work as now each word has the same chance to get chosen.
-	3. When, you have your next word, update the history and go back to step 2, unless step 4 applies.
-	4. The sentence prediction process will halt when it encounters the `"</s>"` token or
-	   reaches the maximum sentence length (given by `max_sentence_len`).
-	5. Each generated sentence should conclude with a period ".".
-	6. Once you have generated the desired number of sentences (given by `n_sentences`),
-	   save them to a text file named `"generated_{name}_sentences.txt"`, here name is the name of the model.
-	   Each sentence should occupy its own line in the text file.
-
-	Tip: use np.random.choice
+	Explained in chunks
 	"""
 	produced_sentences = []
 	history = []
@@ -248,49 +263,55 @@ def predict_sentence(model, name, n_sentences, max_sentence_len, no_of_grams):
 	# Start the loop so it continues until all the desired sentences are created
 	for i in range(n_sentences):
 		history = set_history(history, None, name, no_of_grams)
-		print(history)
 		sentence = []
 		sentence.append("<s>")
-		print(sentence)
 		# Keep going until we have either appended the ending character or reached the desired sentence length
+		# Condition_dictionary is defined later to keep track of whether a sentence ended because of the ending token being encountered in the ngrams. 
+		# Condition_length is defined to keep track of whether a sentence ended because the maximum number of words was reached
 		condition_dictionary = True
 		condition_length = True
 		while condition_dictionary and condition_length:
-		# while sentence[-1] != "</s>" and len(sentence) < max_sentence_len:
 			choice_of_words, probabilities = set_probabilities(model, history)
+			# pick words based on the probabilities found in the ngrams dictionary
 			pick_word = np.random.choice(choice_of_words, 1, p=probabilities)
 			next_word = str(pick_word[0])
 			sentence.append(next_word)
 			history = set_history(history, next_word, name, no_of_grams)
 			condition_dictionary = True if sentence[-1] != "</s>" else False
 			condition_length = True if len(sentence) < max_sentence_len else False
-
+		# If we reached the end of the sentence by reaching the max sentence length, we will need to append the ending character
 		if "</s>" not in sentence:
 			sentence.append("</s>")
 		produced_sentences.append(sentence)
-		print(produced_sentences)
 		# Initialise new history for each new sentence
 		history = []
-	print("all the sentences at the conclusion of the function: ", produced_sentences)
 	return produced_sentences
 
 
 def join_text(list_of_sentences):
+	"""
+	HELPER FUNCTION FOR main() to ensure that the first letter of the first word of a sentence is capitalised, and that 
+	every sentence ends with a period.
+	"""
 	sentences_text = []
-	for list in list_of_sentences:
-		if list[0] == "<s>" and list [-1] == "</s>":
-			list.pop(0)
-			list.pop(-1)
-		string_sentence = ' '.join(list)
-		sentences_text.append(string_sentence)
+	for sentence in list_of_sentences:
+		if sentence[0] == "<s>" and sentence[-1] == "</s>":
+			sentence.pop(0)
+			sentence.pop(-1)
+		string_sentence = ' '.join(sentence)
+		string_sentence.capitalize()
+		finished_sentence = string_sentence + "."
+		sentences_text.append(finished_sentence)
 	return sentences_text
 
 
 	
 
-def main(model_name, corpus_filename, n_sentences, max_sentence_len):
-	# TO-DO: CHANGE "TEXT.TXT" TO CORPUS_FILENAME IF IMPLEMENTING READING IN OTHER FILES!!
-	    
+def main(model_name, corpus_name, n_sentences, max_sentence_len, filename):
+	"""
+	
+	"""
+	corpus_filename = produce_corpus(corpus_name)
 	corpus = parse_text_file(corpus_filename)
 	ngrams, no_of_grams = make_ngram_model(corpus, model_name)
 	if model_name == "unigram":
@@ -298,6 +319,8 @@ def main(model_name, corpus_filename, n_sentences, max_sentence_len):
 	produced_sentences = predict_sentence(ngrams, model_name, n_sentences, max_sentence_len, no_of_grams)
 	produced_sentences_str = join_text(produced_sentences)
 	print(produced_sentences_str)
+	with open(filename, 'w') as f:
+		f.write("\n".join(produced_sentences_str))
 	
 
 
@@ -345,13 +368,15 @@ def collect_inputs_from_gui():
 		max_sentence_len = number_of_words.get()
 		n_sentences = number_of_sentences.get()
 		filename = filename_entry.get()
+		corpus_name = corpus_entry.get()
 	except:
 		sys.exit()
 	go_ahead = check_filename(filename) and check_numerical_inputs(n_sentences, "sentences") and check_numerical_inputs(max_sentence_len, "words")
 	if go_ahead == True:
 		n_sentences = int(n_sentences)
 		max_sentence_len = int(max_sentence_len)
-		main(model_name, "text.txt", n_sentences, max_sentence_len)
+		filename_full = filename + ".txt"
+		main(model_name, corpus_name, n_sentences, max_sentence_len, filename_full)
 
 	
 
@@ -402,6 +427,11 @@ ask_filename = tk.Label(file_details_frame, text = "What should the output file 
 ask_filename.pack()
 filename_entry = tk.Entry(file_details_frame, bg="white")
 filename_entry.pack()
+ask_corpus = tk.Label(file_details_frame, text = "Which corpus should the model be trained on? ")
+ask_corpus.pack()
+corpus_entry = ttk.Combobox(file_details_frame, values = ["abc","brown","gutenberg"], state = "readonly")
+corpus_entry.pack()
+
 
 # Add padding to all frames to make the window neater
 for widget in frame.winfo_children():
@@ -414,53 +444,3 @@ window.mainloop()
 
 
 			
-
-
-	
-	 
-
-# TODO finish the script here,
-#  if you want you can also use a main function and the if __name__ == "__main__": control flow.
-
-
-# raise NotImplementedError("Complete the code for the script")
-
-
-
-
-'''
-
-"""
-DO NOT CHANGE THE CODE BELOW!
-THESE TEST ARE VERY BASIC TEST TO GIVE AN IDEA IF YOU ARE ON THE RIGHT TRACK!
-"""
-
-class TestUnigram(unittest.TestCase):
-	pass
-
-path = Path.cwd()
-path = path.glob('**/test.txt').__next__()
-
-parse_text_file_tests = [
-	(path, [['<s>', 'This', 'is', 'a', 'test', 'sentence', '</s>']])
-]
-
-make_model_tests = [
-	(([['<s>', 'This', 'is', 'a', 'sentence', '</s>']], "unigram"),
-	 {'<any>': {'This': 0.2,
-				'a': 0.2,
-				'is': 0.2,
-				'sentence': 0.2,
-				'</s>': 0.2}}),
-]
-
-autograder.create_tests(TestUnigram, parse_text_file, parse_text_file_tests)
-autograder.create_tests(TestUnigram, make_ngram_model, make_model_tests)
-
-"""
-Here the test suite are made, each suite has its own class
-"""
-suite = unittest.TestLoader().loadTestsFromTestCase(TestUnigram)
-unittest.TextTestRunner(verbosity=2).run(suite)
-
-'''
