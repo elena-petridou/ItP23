@@ -66,7 +66,6 @@ def index_positions(name):
 	counts["unigram"] = 1
 	counts["bigram"] = 2
 	counts["trigram"] = 3
-	counts["quadgram"] = 4
 	no_of_grams = counts[name]
 	return no_of_grams, counts
 
@@ -92,7 +91,6 @@ def make_ngrams(no_of_grams, sentence, index_position, inverted_counts, counts):
 			ngram = tuple(ngram)
 			model_name = inverted_counts[num+1]
 			counts[model_name][ngram] += 1
-		# print(counts)
 	# To abstract the calculation of probabilities when creating the n-gram probability dictionary 
 	try: 
 		previous_model = inverted_counts[no_of_grams-1]
@@ -109,21 +107,24 @@ def make_counts(name, sentences):
 		index_position = 0 
 		while index_position < len(sentence):
 			previous_model = make_ngrams(no_of_grams, sentence, index_position, inverted_counts, counts)
-			total_words += 1
+			if sentence[index_position]!= "<s>":
+				total_words += 1
 			index_position += 1
-	return counts, total_words, previous_model, no_of_grams
+	return counts, total_words, previous_model, no_of_grams, inverted_counts
 
 
 
 
-def fetch_start_term(counts, total_words):
-	start_term_unigram = NullDict()
+def fetch_start_term(counts):
+	start_term = NullDict()
 	for key, count in counts["bigram"].items():
 		first_word = key[0]
 		denom = counts["unigram"][("<s>",)]
 		if first_word == "<s>":
-			start_term_unigram[key[1]] = count/denom
-	return start_term_unigram    
+			start_term[key[1]] = count/denom
+	return start_term    
+
+
 
 
 
@@ -150,25 +151,31 @@ def make_ngram_model(sentences, name):
 		   If you want to loop over the values add .values() thus `for value in dict.values:`
 		   and for both you can use `for key, value in dict.items():`
 	"""
-	# Make a dictionary with counts of the words, bigrams, trigrams, and/or quadgrams respectively (the last three if applicable based on the specified model). 
+	# Make a dictionary with counts of the words, bigrams, and/or trigrams respectively (the last three if applicable based on the specified model). 
 	# Count the total words in the corpus at the same time
-	counts, total_words, previous_model, no_of_grams = make_counts(name, sentences)
+	counts, total_words, previous_model, no_of_grams, inverted_counts = make_counts(name, sentences)
 	ngrams = NullDict()
-	if no_of_grams > 2:
-		start_terms = fetch_start_term(counts, total_words)
+	if name == "trigram":
+		start_terms = fetch_start_term(counts)
 		ngrams[("<s>",)] = start_terms
 	for ngram, count in counts[name].items():
 		key = []
 		for i in range(no_of_grams-1):
 			key.append(ngram[i])
-		key = tuple(key)
+		if no_of_grams == 1: 
+			key = ngram
+		current_key = tuple(key)
 		term = ngram[-1]
-		if ngrams[key] == 0:
-			ngrams[key] = NullDict()
+		if ngrams[current_key] == 0:
+			if no_of_grams > 1:
+				ngrams[current_key] = NullDict()
 	# Here, ngram is the whole ngram, and count = P(whole ngram | first n-1 words in the ngram), while denom = P(first n-1 words in the ngram), and we use these
 	# later to calculate the conditional probability of the ngram
-		denom = counts[previous_model][key] if previous_model != False else total_words
-		ngrams[key][term] = count/denom
+		denom = counts[previous_model][current_key] if previous_model != False else total_words
+		if str(type(ngrams[current_key])) == "<class '__main__.NullDict'>":
+			ngrams[current_key][term] = count/denom
+		else:
+			ngrams[current_key] = count/denom
 	return ngrams, no_of_grams
 
 
@@ -192,8 +199,8 @@ def set_history(history, new_word, name, no_of_grams):
 	elif len(history) == 0 or "</s>" in history:
 		history = ["<s>"]
 	elif len(history) >= no_of_grams-1:
-			history.pop(0)
-			history.append(new_word)
+		history.pop(0)
+		history.append(new_word)
 	else:
 		history.append(new_word)
 	return history
@@ -202,11 +209,10 @@ def set_history(history, new_word, name, no_of_grams):
 def set_probabilities(model, history):
 	if len(history) > 0:
 		history = tuple(history)
-		print(history)
 		choice_of_words = [word for word in model[history].keys()]
 		probabilities = [word for word in model[history].values()]
 	else:
-		choice_of_words = [word for word in model.keys()]
+		choice_of_words = [str(word[0]) for word in model.keys()]
 		probabilities = [word for word in model.values()]
 	return choice_of_words, probabilities
 
@@ -237,36 +243,29 @@ def predict_sentence(model, name, n_sentences, max_sentence_len, no_of_grams):
 	"""
 	produced_sentences = []
 	history = []
-	# Initialise the history  
 	max_sentence_len = max_sentence_len + len(history) + 1
 	# Start the loop so it continues until all the desired sentences are created
 	for i in range(n_sentences):
 		history = set_history(history, None, name, no_of_grams)
-		print("number of sentences: ", i)
+		print(history)
 		sentence = []
-		print("sentence at the start: ", sentence)
-		sentence.extend(history)
-		print("sentence after appending history: ", sentence)
+		sentence.append("<s>")
+		print(sentence)
 		# Keep going until we have either appended the ending character or reached the desired sentence length
-		condition_dictionary = True if sentence[-1] != "</s>" else False
-		condition_length = True if len(sentence) < max_sentence_len else False
+		condition_dictionary = True
+		condition_length = True
 		while condition_dictionary and condition_length:
 		# while sentence[-1] != "</s>" and len(sentence) < max_sentence_len:
 			choice_of_words, probabilities = set_probabilities(model, history)
 			pick_word = np.random.choice(choice_of_words, 1, p=probabilities)
 			next_word = str(pick_word[0])
-			print("next word: ", next_word)
 			sentence.append(next_word)
-			print("sentence after appending new word: ", sentence)
-			print(len(history))
 			history = set_history(history, next_word, name, no_of_grams)
-			print("history: ", history)
 			condition_dictionary = True if sentence[-1] != "</s>" else False
 			condition_length = True if len(sentence) < max_sentence_len else False
 
 		if "</s>" not in sentence:
 			sentence.append("</s>")
-		print("condition length: ", condition_length, "condition dictionary: ", condition_dictionary)
 		produced_sentences.append(sentence)
 		print(produced_sentences)
 		# Initialise new history for each new sentence
@@ -292,6 +291,8 @@ def main(model_name, corpus_filename, n_sentences, max_sentence_len):
 	# TO-DO: CHANGE "TEXT.TXT" TO CORPUS_FILENAME IF IMPLEMENTING READING IN OTHER FILES!!    
 	corpus = parse_text_file("text.txt")
 	ngrams, no_of_grams = make_ngram_model(corpus, model_name)
+	if model_name == "unigram":
+		del ngrams[("<s>",)]
 	produced_sentences = predict_sentence(ngrams, model_name, n_sentences, max_sentence_len, no_of_grams)
 	produced_sentences_str = join_text(produced_sentences)
 	print(produced_sentences_str)
@@ -345,7 +346,6 @@ def collect_inputs_from_gui():
 	except:
 		sys.exit()
 	go_ahead = check_filename(filename) and check_numerical_inputs(n_sentences, "sentences") and check_numerical_inputs(max_sentence_len, "words")
-	print(go_ahead)
 	if go_ahead == True:
 		n_sentences = int(n_sentences)
 		max_sentence_len = int(max_sentence_len)
@@ -367,8 +367,7 @@ frame.pack()
 # Splitting the gui into smaller frames per input
 instructions_frame = tk.LabelFrame(frame, text = "How this works")
 instructions_frame.grid(row=0, column=0, padx = 20, pady=20)
-instructions_label = tk.Label(instructions_frame, text = '''In this application, you can train a simple natural language processing model using unigrams, bigrams, trigrams or quadgrams. 
-The reason for not going above a quadgram is that it reduces the effectiveness of the model, resulting in sentences that are mostly duplicates of ones found in the corpus.
+instructions_label = tk.Label(instructions_frame, text = '''In this application, you can train a simple natural language processing model using unigrams, bigrams, or trigrams. 
 Using one of these models, the application will then output a number of sentences in a text file.
 							  
 To start, please select which of the four models you wish to train. Then, choose which corpus you would like to train it on. Select your desired length of sentences to produce, 
@@ -383,7 +382,7 @@ model_details_frame = tk.LabelFrame(frame, text = "Model details")
 model_details_frame.grid(row = 1, column = 0, padx = 20, pady = 20)
 pick_model = tk.Label (model_details_frame, text = "Type of ngram to train")
 pick_model.pack()
-model_entry = ttk.Combobox(model_details_frame, values = ["unigram","bigram","trigram","quadgram"], state = "readonly")
+model_entry = ttk.Combobox(model_details_frame, values = ["unigram","bigram","trigram"], state = "readonly")
 model_entry.pack()
 ask_number_of_words = tk.Label (model_details_frame, text = "Max. number of words per sentence")
 ask_number_of_words.pack()
