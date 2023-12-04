@@ -1,6 +1,7 @@
 import nltk  # This is a major NLP library
 import contractions
 from nltk.tag import pos_tag
+import os
 
 
 
@@ -12,13 +13,8 @@ nltk.download('gutenberg')
 from nltk.corpus import abc, brown, gutenberg
 
 
-gutenberg_corpus = gutenberg
-for sentence in gutenberg_corpus:
-    print(sentence)
-
-
 # Dictionary of junk terms I encountered throughout making the project
-junk_terms = ["ntilde", "changes'exciting'Major"]
+junk_terms = ["ntilde", "changes'exciting'Major", "''"]
 
 def clean_contractions(sentence):
     return contractions.fix(sentence)
@@ -54,8 +50,8 @@ def clean_sentence(sentence):
     for word in sentence:
         cleaned_word = "".join([char for char in word if char.isalnum() or char == "'"])
 
-        if (cleaned_word != "") and cleaned_word not in junk_terms:
-            cleaned_words.append(cleaned_word) 
+        if cleaned_word != '' and cleaned_word not in junk_terms:
+            cleaned_words.append(cleaned_word)
     
     proper_nouns = tag_proper_nouns(cleaned_words)
     lowered = make_lower(cleaned_words, proper_nouns)
@@ -69,19 +65,22 @@ def produce_corpus(user_input):
     match user_input:
         case "abc":
             sample_corpus = abc
+            corpus_filename = "custom_abc.txt"
         case "brown":
             sample_corpus = brown
-        
-
+            corpus_filename = "custom_brown.txt"
+        case "gutenberg":
+            sample_corpus = gutenberg
+            corpus_filename = "custom_gutenberg.txt"
+    print('starting')
     cleaned_sentences = []
     for sentence in sample_corpus.sents():
         cleaned_sentence = clean_sentence(sentence)
-    if (len(cleaned_sentence) > 1):
-        cleaned_sentences.append(cleaned_sentence)
-    print(cleaned_sentences)
-
-
-    # with open("corpus_test.txt", 'w') as f:
-        # f.write("\n".join(cleaned_sentences))
+        if (len(cleaned_sentence) > 1):
+            cleaned_sentences.append(cleaned_sentence)
+    if not os.path.exists(corpus_filename):
+        with open(corpus_filename, 'w') as f:
+            f.write("\n".join(cleaned_sentences))
+    return corpus_filename
 
 
