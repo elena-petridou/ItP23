@@ -11,11 +11,11 @@ from custom_parser import produce_corpus
 
 '''
 PLEASE NOTE: 
-1) The custom_parser.py file needs nltk.punkt, nltk.abc, nltk.brown and nltk.gutenberg to run correctly. If you are getting an NLTK 
+1) The custom_parser.py file needs nltk.punkt, nltk.abc, nltk.brown to run correctly. If you are getting an NLTK 
 	resource error when trying to run the assignment, please use:
 		>>>import nltk
 		>>>nltk.download()
-	via a terminal to download the required resources
+	via a terminal to download the required resources (from corpora: abc, brown -- my computer also asked for punkt but my friend's did not)
 2) In order to make the program shorter to run, the custom_parser.py checks whether a corpus has already been stored with the 
 	specified filename on your computer. However, if the program is interrupted during runtime before finishing, the corpus could be 
 	stored incorrectly. For this reason, if the corpus (or corpus file) is suspiciously short after a runtime interruption, please delete
@@ -466,7 +466,7 @@ filename_entry = tk.Entry(file_details_frame, bg="white")
 filename_entry.pack()
 ask_corpus = tk.Label(file_details_frame, text = "Which corpus should the model be trained on? ")
 ask_corpus.pack()
-corpus_entry = ttk.Combobox(file_details_frame, values = ["abc","brown","gutenberg"], state = "readonly")
+corpus_entry = ttk.Combobox(file_details_frame, values = ["abc","brown"], state = "readonly")
 corpus_entry.pack()
 
 
