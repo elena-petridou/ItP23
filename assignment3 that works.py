@@ -10,8 +10,18 @@ from custom_parser import produce_corpus
 
 
 '''
-TO DO: 
-- Add comments to whole doc
+PLEASE NOTE: 
+1) The custom_parser.py file needs nltk.punkt, nltk.abc, nltk.brown and nltk.gutenberg to run correctly. If you are getting an NLTK 
+	resource error when trying to run the assignment, please use:
+		>>>import nltk
+		>>>nltk.download()
+	via a terminal to download the required resources
+2) In order to make the program shorter to run, the custom_parser.py checks whether a corpus has already been stored with the 
+	specified filename on your computer. However, if the program is interrupted during runtime before finishing, the corpus could be 
+	stored incorrectly. For this reason, if the corpus (or corpus file) is suspiciously short after a runtime interruption, please delete
+	the associated corpus file and try again
+
+	Thank you, I hope it works :) 
 '''
 
 
@@ -299,7 +309,7 @@ def join_text(list_of_sentences):
 			sentence.pop(0)
 			sentence.pop(-1)
 		string_sentence = ' '.join(sentence)
-		string_sentence.capitalize()
+		string_sentence = string_sentence.capitalize()
 		finished_sentence = string_sentence + "."
 		sentences_text.append(finished_sentence)
 	return sentences_text
@@ -309,24 +319,41 @@ def join_text(list_of_sentences):
 
 def main(model_name, corpus_name, n_sentences, max_sentence_len, filename):
 	"""
-	
+	This function: 
+	- Calls the custom parser function which we imported at the head of the document, to fetch the filename where the corpus is stored (either created for the first time now, 
+	or during previously running the script)
+	- Parses the corpus into a list of lists (sentences)
+	- Creates the ngrams, and removes the sentence start token from the unigram model (so that it doesn't show up in the middle of sentences)
+	- Produces sentences, and then formats them 
+	- Writes the sentences to the file with the name specified by the user
+
 	"""
+	print("STATUS: Generating the corpus...")
 	corpus_filename = produce_corpus(corpus_name)
+	print("STATUS: Parsing the corpus...")
 	corpus = parse_text_file(corpus_filename)
+	print("STATUS: Training the model...")
 	ngrams, no_of_grams = make_ngram_model(corpus, model_name)
 	if model_name == "unigram":
 		del ngrams[("<s>",)]
+	print("STATUS: Generating sentences...")
 	produced_sentences = predict_sentence(ngrams, model_name, n_sentences, max_sentence_len, no_of_grams)
 	produced_sentences_str = join_text(produced_sentences)
-	print(produced_sentences_str)
+	print("STATUS: Writing the sentences to a file...")
 	with open(filename, 'w') as f:
 		f.write("\n".join(produced_sentences_str))
+	print("STATUS: Finished! You can view your file")
 	
 
 
 
 
 def check_filename(filename):
+	"""
+	HELPER FUNCTION FOR collect_inputs_from_gui()
+	- Ensures that there are no reserved characters for an OS in the specified filename, and warns the user if this is the case
+	- Tells the execution to go ahead or blocks it based on the return value
+	"""
 	forbidden_chars = ["/", "\\", "?", "%", "*", ":", "|", "<", ">", ".", ",", ";", "="]
 	forbidden_chars_in_filename = []
 	type_filename = str(type(filename))
@@ -347,6 +374,12 @@ def check_filename(filename):
 
 
 def check_numerical_inputs(input, field):
+	"""
+	HELPER FUNCTION FOR collect_inputs_from_gui()
+	- Ensures that the inputs in the typing dialogues are numeric
+	- Tells the execution to go ahead or blocks it based on the return value
+	"""
+
 	numeric = input.isdigit()
 	match numeric:
 		case True:
@@ -361,6 +394,10 @@ def check_numerical_inputs(input, field):
 
 	
 def collect_inputs_from_gui():
+	"""
+	- Grabs the user inputs and starts the program if the checks are passed by calling main(); waits otherwise. 
+	- Stops the GUI loop if the user exits out of the GUI window
+	"""
 	go_ahead = False
 	# If the user closes the window without inputting anything, end the program
 	try:
@@ -395,11 +432,11 @@ frame.pack()
 instructions_frame = tk.LabelFrame(frame, text = "How this works")
 instructions_frame.grid(row=0, column=0, padx = 20, pady=20)
 instructions_label = tk.Label(instructions_frame, text = '''In this application, you can train a simple natural language processing model using unigrams, bigrams, or trigrams. 
-Using one of these models, the application will then output a number of sentences in a text file.
+Using one of these models, the application will then output your desired number of sentences in a text file. Please note: a large number of sentences or words per sentence can affect runtime.
 							  
-To start, please select which of the four models you wish to train. Then, choose which corpus you would like to train it on. Select your desired length of sentences to produce, 
+To start, please select which of the three models you wish to train from the drop-down menu. Then, choose which corpus you would like to train it on. Select your desired length of sentences to produce, 
 and the maximum number of words you want each sentence to have. Please note: some sentences might end up shorter, but never longer than the maximum sentence length. 
-Finally, specify the filename for the text file.
+Finally, specify the filename for the text file, without the file extension.
 
 Once you're ready to begin generating, hit the start button.''')
 instructions_label.pack()
