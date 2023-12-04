@@ -7,13 +7,14 @@ import tkinter as tk
 from tkinter import simpledialog
 import sys
 from tkinter import ttk
-
+from custom_parser import produce_corpus
 
 
 '''
 TO DO: 
-- User interface (Tkinter?)
-
+- Add comments to whole doc
+- Check that new coding concepts were used
+- Write function that writes the generated sentences to a file
 '''
 
 
@@ -288,8 +289,9 @@ def join_text(list_of_sentences):
 	
 
 def main(model_name, corpus_filename, n_sentences, max_sentence_len):
-	# TO-DO: CHANGE "TEXT.TXT" TO CORPUS_FILENAME IF IMPLEMENTING READING IN OTHER FILES!!    
-	corpus = parse_text_file("text.txt")
+	# TO-DO: CHANGE "TEXT.TXT" TO CORPUS_FILENAME IF IMPLEMENTING READING IN OTHER FILES!!
+	    
+	corpus = parse_text_file(corpus_filename)
 	ngrams, no_of_grams = make_ngram_model(corpus, model_name)
 	if model_name == "unigram":
 		del ngrams[("<s>",)]

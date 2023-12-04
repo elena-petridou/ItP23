@@ -5,10 +5,7 @@ import os
 
 
 
-nltk.download('abc')
 nltk.download('punkt')
-nltk.download('brown')
-nltk.download('gutenberg')
 
 from nltk.corpus import abc, brown, gutenberg
 
@@ -64,12 +61,15 @@ def clean_sentence(sentence):
 def produce_corpus(user_input):
     match user_input:
         case "abc":
+            nltk.download('abc')
             sample_corpus = abc
             corpus_filename = "custom_abc.txt"
         case "brown":
+            nltk.download('brown')
             sample_corpus = brown
             corpus_filename = "custom_brown.txt"
         case "gutenberg":
+            nltk.download('gutenberg')
             sample_corpus = gutenberg
             corpus_filename = "custom_gutenberg.txt"
     print('starting')
@@ -78,6 +78,7 @@ def produce_corpus(user_input):
         cleaned_sentence = clean_sentence(sentence)
         if (len(cleaned_sentence) > 1):
             cleaned_sentences.append(cleaned_sentence)
+    print(cleaned_sentences)
     if not os.path.exists(corpus_filename):
         with open(corpus_filename, 'w') as f:
             f.write("\n".join(cleaned_sentences))
