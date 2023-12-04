@@ -156,7 +156,7 @@ def make_ngram_model(sentences, name):
 	ngrams = NullDict()
 	if no_of_grams > 2:
 		start_terms = fetch_start_term(counts, total_words)
-		ngrams["<s>"] = start_terms
+		ngrams[("<s>",)] = start_terms
 	for ngram, count in counts[name].items():
 		key = []
 		for i in range(no_of_grams-1):
@@ -169,14 +169,14 @@ def make_ngram_model(sentences, name):
 	# later to calculate the conditional probability of the ngram
 		denom = counts[previous_model][key] if previous_model != False else total_words
 		ngrams[key][term] = count/denom
-	return ngrams
+	return ngrams, no_of_grams
 
 
 
 
 
 
-def set_history(history, new_word, name):
+def set_history(history, new_word, name, no_of_grams):
 	"""
 	This function should return a new history depending on the model that is used and the new_word.
 	name could be three values: unigram, bigram or trigram.
@@ -191,8 +191,10 @@ def set_history(history, new_word, name):
 		history = [] 
 	elif len(history) == 0 or "</s>" in history:
 		history = ["<s>"]
+	elif len(history) >= no_of_grams-1:
+			history.pop(0)
+			history.append(new_word)
 	else:
-		history.pop(0)
 		history.append(new_word)
 	return history
 
@@ -200,6 +202,7 @@ def set_history(history, new_word, name):
 def set_probabilities(model, history):
 	if len(history) > 0:
 		history = tuple(history)
+		print(history)
 		choice_of_words = [word for word in model[history].keys()]
 		probabilities = [word for word in model[history].values()]
 	else:
@@ -209,7 +212,7 @@ def set_probabilities(model, history):
 
 
 
-def predict_sentence(model, name, n_sentences, max_sentence_len):
+def predict_sentence(model, name, n_sentences, max_sentence_len, no_of_grams):
 	"""
 	Here, you will implement a sentence predictor.
 
@@ -238,7 +241,7 @@ def predict_sentence(model, name, n_sentences, max_sentence_len):
 	max_sentence_len = max_sentence_len + len(history) + 1
 	# Start the loop so it continues until all the desired sentences are created
 	for i in range(n_sentences):
-		history = set_history(history, None, name)
+		history = set_history(history, None, name, no_of_grams)
 		print("number of sentences: ", i)
 		sentence = []
 		print("sentence at the start: ", sentence)
@@ -255,7 +258,8 @@ def predict_sentence(model, name, n_sentences, max_sentence_len):
 			print("next word: ", next_word)
 			sentence.append(next_word)
 			print("sentence after appending new word: ", sentence)
-			history = set_history(history, next_word, name)
+			print(len(history))
+			history = set_history(history, next_word, name, no_of_grams)
 			print("history: ", history)
 			condition_dictionary = True if sentence[-1] != "</s>" else False
 			condition_length = True if len(sentence) < max_sentence_len else False
@@ -271,11 +275,28 @@ def predict_sentence(model, name, n_sentences, max_sentence_len):
 	return produced_sentences
 
 
+def join_text(list_of_sentences):
+	sentences_text = []
+	for list in list_of_sentences:
+		if list[0] == "<s>" and list [-1] == "</s>":
+			list.pop(0)
+			list.pop(-1)
+		string_sentence = ' '.join(list)
+		sentences_text.append(string_sentence)
+	return sentences_text
+
+
+	
+
 def main(model_name, corpus_filename, n_sentences, max_sentence_len):
 	# TO-DO: CHANGE "TEXT.TXT" TO CORPUS_FILENAME IF IMPLEMENTING READING IN OTHER FILES!!    
 	corpus = parse_text_file("text.txt")
-	ngrams = make_ngram_model(corpus, model_name)
-	predict_sentence(ngrams, model_name, n_sentences, max_sentence_len)
+	ngrams, no_of_grams = make_ngram_model(corpus, model_name)
+	produced_sentences = predict_sentence(ngrams, model_name, n_sentences, max_sentence_len, no_of_grams)
+	produced_sentences_str = join_text(produced_sentences)
+	print(produced_sentences_str)
+	
+
 
 
 
@@ -347,14 +368,14 @@ frame.pack()
 instructions_frame = tk.LabelFrame(frame, text = "How this works")
 instructions_frame.grid(row=0, column=0, padx = 20, pady=20)
 instructions_label = tk.Label(instructions_frame, text = '''In this application, you can train a simple natural language processing model using unigrams, bigrams, trigrams or quadgrams. 
-							  The reason for not going above a quadgram is that it reduces the effectiveness of the model, resulting in sentences that are mostly duplicates of ones found in the corpus.
-							  Using one of these models, the application will then output a number of sentences in a text file.
+The reason for not going above a quadgram is that it reduces the effectiveness of the model, resulting in sentences that are mostly duplicates of ones found in the corpus.
+Using one of these models, the application will then output a number of sentences in a text file.
 							  
-							  To start, please select which of the four models you wish to train. Then, choose which corpus you would like to train it on. Select your desired length of sentences to produce, 
-							  and the maximum number of words you want each sentence to have. Please note: some sentences might end up shorter, but never longer than the maximum sentence length. 
-							  Finally, specify the filename for the text file.
-							  Once you're ready to begin generating, hit the start button.
-							  ''')
+To start, please select which of the four models you wish to train. Then, choose which corpus you would like to train it on. Select your desired length of sentences to produce, 
+and the maximum number of words you want each sentence to have. Please note: some sentences might end up shorter, but never longer than the maximum sentence length. 
+Finally, specify the filename for the text file.
+
+Once you're ready to begin generating, hit the start button.''')
 instructions_label.pack()
 
 # New frame for model details
