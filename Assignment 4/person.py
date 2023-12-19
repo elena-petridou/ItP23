@@ -36,9 +36,9 @@ class Person():
         self.__height__ = height
         self.__weight__= weight
     def attributes(self):
-        return [self.__name__, self.__age__, self.__weight__ , self.__height__]
+        return [self.__name__, self.__age__, self.__height__, self.__weight__]
     def __repr__(self):
-        return "Name: " + str(self._name) + " Age: " + str(self._age) + " Height: " + str(self._height) + "cm" + " Weight: " + str(self._weight) + "kg"
+        return "Name: " + str(self.__name__) + " Age: " + str(self.__age__) + " Height: " + str(self.__height__) + "cm" + " Weight: " + str(self.__weight__) + "kg"
     def __str__(self):
         return self.__name__
     def __int__(self):
@@ -80,10 +80,7 @@ def create_persons_list(n=10):
         person_list.append(person)
     return person_list
 
-persons = create_persons_list()
-person = persons[0]
-print(person[2])
-print(list(person))
+
 
 
 
