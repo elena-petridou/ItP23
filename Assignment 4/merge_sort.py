@@ -3,6 +3,7 @@ from person import create_persons_list
 
 keys = {"name": 0, "age": 1, "height": 2, "weight": 3}
 
+# Errors and checks to handle unrecognised user input
 class CustomKeyError():
     def __init__(self):
         raise Exception("Sorry, key argument not recognised. You may use: age, weight, height, name, specify no key, or a number between 0 and 3 (inclusive)")
@@ -13,8 +14,12 @@ class ReverseError():
 
 
 def check_reverse(reverse):
-    if reverse == True or reverse == False or reverse == 1 or reverse == 0 or reverse == 'True' or reverse == 'False':
+    if reverse == True or reverse == False or reverse == 1 or reverse == 0:
         return reverse
+    if reverse == 'True':
+        return True
+    if reverse == 'False':
+        return False
     else:
         raise ReverseError()
 
@@ -62,14 +67,15 @@ def mergesort(lst, key = None, reverse = False):
     else:
         return lst
 
-
+# Implementing key sorting in a way that does not change the code required to sort without a key
 def sort_with_key(left_element, right_element, key = None):
     if key != None:
         left_element = left_element[key]
         right_element = right_element[key]
     return left_element, right_element
 
-    
+# As above, implementing reverse_sort so that it flips the logic when reverse argument is specified, so that sorting with/without the key in 
+# mergesort itself uses the same code    
 def reverse_sort(left_element, right_element, reverse = False):
     match reverse:
         case False:
@@ -103,7 +109,7 @@ def merge(lst1, lst2, key = None, reverse = False):
 
 def main():
     array = create_persons_list(10)
-    # sorted_array = mergesort(array, key="weight", reverse='False')  
+    sorted_array = mergesort(array, key="age", reverse='False')  
     
 
     
