@@ -7,19 +7,13 @@ This file provides includes a function to load in the names from the text file n
 Finish, the code in load_names. 
 """
 
-def make_names_into_list(txt):
-    ls_of_names = []
-    word = []
-    for letter in txt:
-        if letter != "\n":
-            word.append(letter)
-        else:
-            word_str = ''.join(word)
-            ls_of_names.append(word_str)
-            word = []
-    return ls_of_names
 
-
+def remove_newline(name):
+    if '\n' in name:
+        new_name = name.replace('\n', '')
+        return new_name
+    else:
+        return name
 
 
 def load_names():
@@ -32,12 +26,10 @@ def load_names():
     path = Path.cwd()
     # This finds the correct path to names.txt from where you run the python file
     path = path.glob('**/names.txt').__next__()
-    f = open(path, 'r')
-    names = f.read()
-    name_list = make_names_into_list(names)
-    return name_list
-
-    
+    with open(path, 'r') as txt:
+        names = txt.readlines()
+    formatted_names = [remove_newline(name) for name in names]
+    return formatted_names
 
 
 

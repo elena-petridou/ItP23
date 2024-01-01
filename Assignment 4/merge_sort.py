@@ -13,7 +13,7 @@ class ReverseError():
 
 
 def check_reverse(reverse):
-    if reverse == True or reverse == False or reverse == 1 or reverse == 0:
+    if reverse == True or reverse == False or reverse == 1 or reverse == 0 or reverse == 'True' or reverse == 'False':
         return reverse
     else:
         raise ReverseError()
@@ -103,22 +103,11 @@ def merge(lst1, lst2, key = None, reverse = False):
 
 def main():
     array = create_persons_list(10)
-    sorted_array = mergesort(array, key="weight", reverse='whatever')  ## index out of range
-    print(sorted_array)
+    # sorted_array = mergesort(array, key="weight", reverse='False')  
+    
 
     
 if __name__ == "__main__":
     main()
 
-# TODO finish the script here,
-#  if you want you can also use a main function and the if __name__ == "__main__": control flow.
 
-
-
-'''
-PSEUDOCODE
-
-- Split original list until only lists of length 1 remain
-- Check lists of length 1, and see whether 
-
-'''
