@@ -33,18 +33,18 @@ class Person():
     def __init__(self, name, age, height, weight):
         self.__name__ = name
         self.__age__ = age
-        self.__height__ = height
         self.__weight__= weight
+        self.__height__ = height
     def attributes(self):
-        return [self.__name__, self.__age__, self.__height__, self.__weight__]
+        return [self.__name__, self.__age__, self.__weight__, self.__height__]
     def __repr__(self):
-        return "Name: " + str(self.__name__) + " Age: " + str(self.__age__) + " Height: " + str(self.__height__) + "cm" + " Weight: " + str(self.__weight__) + "kg"
+        return "Name: " + str(self.__name__) + " Age: " + str(self.__age__) + " Weight: " + str(self.__weight__) + "kg" + " Height: " + str(self.__height__) + "cm"
     def __str__(self):
         return self.__name__
     def __int__(self):
         return self.__age__
     def __float__(self):
-        return self.__age__
+        return float(self.__age__)
     def __eq__(self, other):
         return self.__height__ == other.__height__
     def __gt__(self, other):
